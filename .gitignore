@@ -1,0 +1,4 @@
+qsurf
+*.o
+Makefile
+.qmake*
