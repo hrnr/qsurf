@@ -10,56 +10,63 @@
 #include <QWebEngineSettings>
 #include <QWebEngineView>
 
-QProcess proc;
-std::function<void(const std::string &)> proc_finished_cb;
-QWebEngineView *view;
 QClipboard *clipboard;
-std::list<QAction> actions; // QAction is not copyable
-std::string find_text;
+
+class WebView : public QWebEngineView {
+public:
+  WebView();
+  virtual ~WebView() { std::cout << "destroyed" << std::endl; }
+
+  void
+  findText(const QString &subString,
+           QWebEnginePage::FindFlags options = QWebEnginePage::FindFlags()) {
+    find_text = subString;
+    QWebEngineView::findText(find_text, options);
+  }
+  void
+  findNext(QWebEnginePage::FindFlags options = QWebEnginePage::FindFlags()) {
+    QWebEngineView::findText(find_text, options);
+  }
+
+private:
+  QWebEngineView *createWindow(QWebEnginePage::WebWindowType) {
+    std::cout << "window requested" << std::endl;
+    return new WebView();
+  }
+
+  QProcess proc;
+  std::function<void(const std::string &)> proc_finished_cb;
+  std::list<QAction> actions; // QAction is not copyable
+  QString find_text;
+};
 
 #include "config.h"
 
-int main(int argc, char *argv[]) {
-  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-  QApplication app(argc, argv);
-  QWebEngineView lview;
-  view = &lview;
-  clipboard = QGuiApplication::clipboard();
-
-  view->load(QUrl("http://google.com"));
-  view->show();
+WebView::WebView() {
+  std::cout << "created" << std::endl;
+  setAttribute(Qt::WA_DeleteOnClose, true);
+  show();
 
   // allow fullscreen
-  view->settings()->setAttribute(QWebEngineSettings::FullScreenSupportEnabled,
-                                 true);
+  settings()->setAttribute(QWebEngineSettings::FullScreenSupportEnabled, true);
   QObject::connect(
-      view->page(), &QWebEnginePage::fullScreenRequested,
-      [](const QWebEngineFullScreenRequest &request) {
+      page(), &QWebEnginePage::fullScreenRequested,
+      [this](const QWebEngineFullScreenRequest &request) {
         const_cast<QWebEngineFullScreenRequest &>(request).accept();
         if (request.toggleOn()) {
-          view->showFullScreen();
+          showFullScreen();
         } else {
-          view->showNormal();
+          showNormal();
         }
       });
-
   // show favicon for pages
-  QObject::connect(view, &QWebEngineView::iconChanged,
-                   [](const QIcon &icon) { view->setWindowIcon(icon); });
-
-  // web actions
-  for (auto shortcut : webshortcuts) {
-    auto action = view->pageAction(std::get<0>(shortcut));
-    action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
-    view->addAction(action);
-  }
-
-  /* set spawn infrastructure */
+  QObject::connect(this, &QWebEngineView::iconChanged,
+                   [this](const QIcon &icon) { setWindowIcon(icon); });
   // connect callback reading output for user process
   QObject::connect(&proc,
                    static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(
                        &QProcess::finished),
-                   [](int exitCode, QProcess::ExitStatus exitStatus) {
+                   [this](int exitCode, QProcess::ExitStatus exitStatus) {
                      if (exitStatus == QProcess::NormalExit && exitCode == 0 &&
                          proc_finished_cb) {
                        std::size_t len = proc.bytesAvailable();
@@ -71,25 +78,44 @@ int main(int argc, char *argv[]) {
                        proc_finished_cb(output);
                      }
                    });
+
+  /* shortcuts */
+  // web actions
+  for (auto shortcut : webshortcuts) {
+    auto action = pageAction(std::get<0>(shortcut));
+    action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
+    addAction(action);
+  }
   // create spawn triggering actions
   for (auto shortcut : spawnshortcuts) {
     actions.emplace_back(std::get<0>(shortcut));
     auto action = &actions.back();
     action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
-    view->addAction(action);
-    QObject::connect(action, &QAction::triggered, [shortcut](bool) {
-      proc.start(userprocess, {std::get<0>(shortcut), view->url().toString()});
-      proc_finished_cb = std::get<2>(shortcut);
+    addAction(action);
+    QObject::connect(action, &QAction::triggered, [shortcut, this](bool) {
+      proc.start(userprocess, {std::get<0>(shortcut), url().toString()});
+      proc_finished_cb = [this, &shortcut](auto output) {
+        std::get<2>(shortcut)(this, output);
+      };
     });
   }
-
+  // general actions
   for (auto shortcut : generalshortcuts) {
     actions.emplace_back();
     auto action = &actions.back();
     action->setShortcuts(QKeySequence::listFromString(std::get<0>(shortcut)));
-    view->addAction(action);
-    QObject::connect(action, &QAction::triggered, std::get<1>(shortcut));
+    addAction(action);
+    QObject::connect(action, &QAction::triggered,
+                     [this, shortcut]() { std::get<1>(shortcut)(this); });
   }
+}
+
+int main(int argc, char *argv[]) {
+  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+  QApplication app(argc, argv);
+  clipboard = QGuiApplication::clipboard();
+
+  new WebView();
 
   return app.exec();
 }

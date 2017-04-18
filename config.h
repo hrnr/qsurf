@@ -10,25 +10,26 @@ webshortcuts = {
 };
 
 std::initializer_list<std::tuple<const char *, const char *,
-                                 std::function<void(const std::string &)>>>
+                                 std::function<void(WebView*, const std::string &)>>>
 spawnshortcuts = {
 {"navigate", "Ctrl+g",
- [](auto output) { view->load(QUrl::fromUserInput(output.c_str())); }},
-{"find", "Ctrl+f", [](auto output) { find_text = output, view->findText(output.c_str());}},
-{"bookmark", "Ctrl+b", [](auto) {}},
+ [](auto view, auto output) { view->load(QUrl::fromUserInput(output.c_str())); }},
+{"find", "Ctrl+f", [](auto view, auto output) { view->findText(output.c_str()); }},
+{"bookmark", "Ctrl+b", [](auto, auto) {}},
 };
 
-std::initializer_list<std::tuple<const char *, std::function<void()>>>
+std::initializer_list<std::tuple<const char *, std::function<void(WebView*)>>>
 generalshortcuts = {
-{"Ctrl+n", []() { view->findText(find_text.c_str()); }},
-{"Ctrl+Shift+n", []() { view->findText(find_text.c_str(), QWebEnginePage::FindBackward); }},
-{"Ctrl+y", []() { clipboard->setText(view->url().toString()); }},
-{"Ctrl+p", []() { view->load(clipboard->text()); }},
-{"Esc", []() {
+{"Ctrl+n", [](auto view) { view->findNext(); }},
+{"Ctrl+Shift+n", [](auto view) { view->findNext(QWebEnginePage::FindBackward); }},
+{"Ctrl+y", [](auto view) { clipboard->setText(view->url().toString()); }},
+{"Ctrl+p", [](auto view) { view->load(clipboard->text()); }},
+{"Esc", [](auto view) {
   if (view->isFullScreen()) {
     view->triggerPageAction(QWebEnginePage::ExitFullScreen);
   } else {
-    find_text = "", view->findText("");
+    // clear find highlights
+    view->findText("");
   }
 }},
 };
