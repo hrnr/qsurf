@@ -24,7 +24,7 @@ dmenu="dmenu -nb $normbgcolor -nf $normfgcolor \
        -sb $selbgcolor -sf $selfgcolor"
 
 s_write_bookmarksf() { # file value
-    tags="$($dmenu -p 'bookmark tags:' | tr ' ' ':')"
+    tags="$(echo -n '' | $dmenu -p 'bookmark tags:' | tr ' ' ':')"
     [ -n "$2" ] && (grep -F -v "$2" "$1" > "$1.temp"; mv "$1.temp" "$1"; echo "t-:$tags $2" >> "$1")
 }
 

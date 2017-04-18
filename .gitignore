@@ -2,3 +2,4 @@ qsurf
 *.o
 Makefile
 .qmake*
+core
