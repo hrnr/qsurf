@@ -27,6 +27,14 @@ public:
   findNext(QWebEnginePage::FindFlags options = QWebEnginePage::FindFlags()) {
     QWebEngineView::findText(find_text, options);
   }
+  void setTitle() {
+    QString security = tls ? QStringLiteral("T ") : QStringLiteral("- ");
+    QString loading = progress > 0 && progress < 100
+                          ? QString("[%1%] ").arg(progress)
+                          : QStringLiteral("");
+
+    setWindowTitle(QString("%1%2%3").arg(security, loading, title()));
+  }
 
 private:
   QWebEngineView *createWindow(QWebEnginePage::WebWindowType) {
@@ -38,6 +46,8 @@ private:
   std::function<void(const std::string &)> proc_finished_cb;
   std::list<QAction> actions; // QAction is not copyable
   QString find_text;
+  int progress = 0;
+  bool tls = false;
 };
 
 #include "config.h"
@@ -108,6 +118,17 @@ WebView::WebView() {
     QObject::connect(action, &QAction::triggered,
                      [this, shortcut]() { std::get<1>(shortcut)(this); });
   }
+
+  // setting window title
+  QObject::connect(this, &QWebEngineView::titleChanged,
+                   [this](const QString &) { setTitle(); });
+  QObject::connect(this, &QWebEngineView::loadProgress,
+                   [this](int p) { progress = p, setTitle(); });
+  QObject::connect(this, &QWebEngineView::loadStarted,
+                   [this]() { progress = 1, setTitle(); });
+  QObject::connect(this, &QWebEngineView::urlChanged, [this](const QUrl &url) {
+    tls = (url.scheme() == "https"), setTitle();
+  });
 }
 
 int main(int argc, char *argv[]) {
