@@ -115,7 +115,11 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
   clipboard = QGuiApplication::clipboard();
 
-  new WebView();
+  auto view = new WebView();
+
+  if (argc > 1) {
+    view->load(QUrl::fromUserInput(argv[1]));
+  }
 
   return app.exec();
 }
