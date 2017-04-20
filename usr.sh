@@ -49,9 +49,8 @@ case $action in
 "bookmark")
     s_write_bookmarksf $bookmarksf "$uri"
     ;;
-"navigate_raw")
-    uri=`echo "$uri" | $dmenu -p "uri:"`
-    echo "$uri"
+"download")
+    echo $uri | $dmenu -p 'download request:'
     ;;
 "navigate")
     s_clean_historyf "$browserhistoryf" 500
@@ -89,7 +88,7 @@ case $action in
         for f in $barhistoryf $findhistoryf $bookmarksf $browserhistoryf; do
             grep -F -v "$arg" "$f" > "$f.temp"; mv "$f.temp" "$f"
         done
-        exit;
+        exit 1;
         ;;
     "t-:"*|"h:"*) # bookmark or history -> strip tags
         uri="$arg"
@@ -109,6 +108,7 @@ case $action in
     exit 0
     ;;
 *)
-    echo Unknown xprop >&2
+    echo Unknown action >&2
+    exit 3
     ;;
 esac

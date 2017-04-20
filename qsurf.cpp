@@ -6,7 +6,9 @@
 #include <QClipboard>
 #include <QIODevice>
 #include <QProcess>
+#include <QWebEngineDownloadItem>
 #include <QWebEngineFullScreenRequest>
+#include <QWebEngineProfile>
 #include <QWebEngineSettings>
 #include <QWebEngineView>
 
@@ -77,10 +79,6 @@ WebView::WebView() {
                      if (exitStatus == QProcess::NormalExit && exitCode == 0 &&
                          proc_finished_cb_) {
                        std::size_t len = proc_.bytesAvailable();
-                       if (len < 2) {
-                         // qt can't handle this small reads
-                         return;
-                       }
                        std::string output(len, '\0');
                        proc_.readLine(&output[0], len);
                        proc_finished_cb_(output);
@@ -127,6 +125,21 @@ WebView::WebView() {
   QObject::connect(this, &QWebEngineView::urlChanged, [this](const QUrl &url) {
     tls_ = (url.scheme() == "https"), setTitle();
   });
+  // managing downloads
+  QObject::connect(
+      page()->profile(), &QWebEngineProfile::downloadRequested,
+      [this](QWebEngineDownloadItem *download) {
+        proc_.start(userprocess, {"download", download->url().toString()});
+        proc_finished_cb_ = [download](auto output) {
+          if (output.size() > 1 && output[0] == 'y') {
+            download->accept();
+          } else {
+            download->cancel();
+          }
+        };
+        // wait so that download struct will not be destroyed
+        proc_.waitForFinished();
+      });
 }
 
 int main(int argc, char *argv[]) {
