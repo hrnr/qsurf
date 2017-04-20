@@ -52,6 +52,9 @@ case $action in
 "download")
     echo $uri | $dmenu -p 'download request:'
     ;;
+"authentication")
+    echo -n '' | $dmenu -p "authentication for $uri:" | tr ' ' ';'
+    ;;
 "navigate")
     s_clean_historyf "$browserhistoryf" 500
     sel=`(echo "$uri"; tac $barhistoryf 2> /dev/null; tac $bookmarksf 2> /dev/null; tac $browserhistoryf 2> /dev/null) |

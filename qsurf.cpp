@@ -3,9 +3,11 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QAuthenticator>
 #include <QClipboard>
 #include <QIODevice>
 #include <QProcess>
+#include <QString>
 #include <QWebEngineDownloadItem>
 #include <QWebEngineFullScreenRequest>
 #include <QWebEngineProfile>
@@ -136,7 +138,22 @@ WebView::WebView() {
           }
         };
         // wait so that download struct will not be destroyed
-        proc_.waitForFinished();
+        proc_.waitForFinished(-1);
+      });
+  // response to authetication
+  QObject::connect(
+      page(), &QWebEnginePage::authenticationRequired,
+      [this](const QUrl &requestUrl, QAuthenticator *authenticator) {
+        proc_.start(userprocess, {"authentication", requestUrl.toString()});
+        proc_finished_cb_ = [authenticator](auto output) {
+          auto output_list = QString::fromStdString(output).split(";");
+          if (output_list.size() < 2) {
+            return;
+          }
+          authenticator->setUser(output_list[0]);
+          authenticator->setPassword(output_list[1]);
+        };
+        proc_.waitForFinished(-1);
       });
 }
 
