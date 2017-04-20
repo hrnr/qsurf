@@ -81,6 +81,11 @@ WebView::WebView() {
                      if (exitStatus == QProcess::NormalExit && exitCode == 0 &&
                          proc_finished_cb_) {
                        std::size_t len = proc_.bytesAvailable();
+                       if (len < 2) {
+                         // qt can't handle this small reads (this would mean
+                         // just endline)
+                         return;
+                       }
                        std::string output(len, '\0');
                        proc_.readLine(&output[0], len);
                        proc_finished_cb_(output);
@@ -154,6 +159,9 @@ WebView::WebView() {
           authenticator->setPassword(output_list[1]);
         };
         proc_.waitForFinished(-1);
+        if (authenticator->user().isEmpty()) {
+          *authenticator = QAuthenticator();
+        }
       });
 }
 
