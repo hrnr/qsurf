@@ -15,7 +15,6 @@ QClipboard *clipboard;
 class WebView : public QWebEngineView {
 public:
   WebView();
-  virtual ~WebView() { std::cout << "destroyed" << std::endl; }
 
   void
   findText(const QString &subString,
@@ -38,7 +37,6 @@ public:
 
 private:
   QWebEngineView *createWindow(QWebEnginePage::WebWindowType) {
-    std::cout << "window requested" << std::endl;
     return new WebView();
   }
 
@@ -53,7 +51,6 @@ private:
 #include "config.h"
 
 WebView::WebView() {
-  std::cout << "created" << std::endl;
   setAttribute(Qt::WA_DeleteOnClose, true);
   show();
 
