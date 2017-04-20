@@ -20,17 +20,17 @@ public:
   void
   findText(const QString &subString,
            QWebEnginePage::FindFlags options = QWebEnginePage::FindFlags()) {
-    find_text = subString;
-    QWebEngineView::findText(find_text, options);
+    find_text_ = subString;
+    QWebEngineView::findText(find_text_, options);
   }
   void
   findNext(QWebEnginePage::FindFlags options = QWebEnginePage::FindFlags()) {
-    QWebEngineView::findText(find_text, options);
+    QWebEngineView::findText(find_text_, options);
   }
   void setTitle() {
-    QString security = tls ? QStringLiteral("T ") : QStringLiteral("- ");
-    QString loading = progress > 0 && progress < 100
-                          ? QString("[%1%] ").arg(progress)
+    QString security = tls_ ? QStringLiteral("T ") : QStringLiteral("- ");
+    QString loading = progress_ > 0 && progress_ < 100
+                          ? QString("[%1%] ").arg(progress_)
                           : QStringLiteral("");
 
     setWindowTitle(QString("%1%2%3").arg(security, loading, title()));
@@ -42,12 +42,12 @@ private:
     return new WebView();
   }
 
-  QProcess proc;
-  std::function<void(const std::string &)> proc_finished_cb;
-  std::list<QAction> actions; // QAction is not copyable
-  QString find_text;
-  int progress = 0;
-  bool tls = false;
+  QProcess proc_;
+  std::function<void(const std::string &)> proc_finished_cb_;
+  std::list<QAction> actions_; // QAction is not copyable
+  QString find_text_;
+  int progress_ = 0;
+  bool tls_ = false;
 };
 
 #include "config.h"
@@ -73,46 +73,47 @@ WebView::WebView() {
   QObject::connect(this, &QWebEngineView::iconChanged,
                    [this](const QIcon &icon) { setWindowIcon(icon); });
   // connect callback reading output for user process
-  QObject::connect(&proc,
+  QObject::connect(&proc_,
                    static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(
                        &QProcess::finished),
                    [this](int exitCode, QProcess::ExitStatus exitStatus) {
                      if (exitStatus == QProcess::NormalExit && exitCode == 0 &&
-                         proc_finished_cb) {
-                       std::size_t len = proc.bytesAvailable();
+                         proc_finished_cb_) {
+                       std::size_t len = proc_.bytesAvailable();
                        if (len < 2) {
+                         // qt can't handle this small reads
                          return;
                        }
                        std::string output(len, '\0');
-                       proc.readLine(&output[0], len);
-                       proc_finished_cb(output);
+                       proc_.readLine(&output[0], len);
+                       proc_finished_cb_(output);
                      }
                    });
 
   /* shortcuts */
+  // create spawn triggering actions
+  for (auto shortcut : spawnshortcuts) {
+    actions_.emplace_back(std::get<0>(shortcut));
+    auto action = &actions_.back();
+    action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
+    addAction(action);
+    QObject::connect(action, &QAction::triggered, [shortcut, this](bool) {
+      proc_.start(userprocess, {std::get<0>(shortcut), url().toString()});
+      proc_finished_cb_ = [this, &shortcut](auto output) {
+        std::get<2>(shortcut)(this, output);
+      };
+    });
+  }
   // web actions
   for (auto shortcut : webshortcuts) {
     auto action = pageAction(std::get<0>(shortcut));
     action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
     addAction(action);
   }
-  // create spawn triggering actions
-  for (auto shortcut : spawnshortcuts) {
-    actions.emplace_back(std::get<0>(shortcut));
-    auto action = &actions.back();
-    action->setShortcuts(QKeySequence::listFromString(std::get<1>(shortcut)));
-    addAction(action);
-    QObject::connect(action, &QAction::triggered, [shortcut, this](bool) {
-      proc.start(userprocess, {std::get<0>(shortcut), url().toString()});
-      proc_finished_cb = [this, &shortcut](auto output) {
-        std::get<2>(shortcut)(this, output);
-      };
-    });
-  }
   // general actions
   for (auto shortcut : generalshortcuts) {
-    actions.emplace_back();
-    auto action = &actions.back();
+    actions_.emplace_back();
+    auto action = &actions_.back();
     action->setShortcuts(QKeySequence::listFromString(std::get<0>(shortcut)));
     addAction(action);
     QObject::connect(action, &QAction::triggered,
@@ -123,11 +124,11 @@ WebView::WebView() {
   QObject::connect(this, &QWebEngineView::titleChanged,
                    [this](const QString &) { setTitle(); });
   QObject::connect(this, &QWebEngineView::loadProgress,
-                   [this](int p) { progress = p, setTitle(); });
+                   [this](int p) { progress_ = p, setTitle(); });
   QObject::connect(this, &QWebEngineView::loadStarted,
-                   [this]() { progress = 1, setTitle(); });
+                   [this]() { progress_ = 1, setTitle(); });
   QObject::connect(this, &QWebEngineView::urlChanged, [this](const QUrl &url) {
-    tls = (url.scheme() == "https"), setTitle();
+    tls_ = (url.scheme() == "https"), setTitle();
   });
 }
 
@@ -138,8 +139,16 @@ int main(int argc, char *argv[]) {
 
   auto view = new WebView();
 
+  // either load url provided in argument or spawn startup action
   if (argc > 1) {
     view->load(QUrl::fromUserInput(argv[1]));
+  } else if (startupaction) {
+    for (auto action : view->actions()) {
+      if (action->shortcut() == QKeySequence(startupaction)) {
+        action->trigger();
+        break;
+      }
+    }
   }
 
   return app.exec();
