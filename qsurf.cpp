@@ -133,8 +133,6 @@ WebView::WebView() {
         proc_finished_cb_ = [download](auto output) {
           if (output.size() > 1 && output[0] == 'y') {
             download->accept();
-          } else {
-            download->cancel();
           }
         };
         // wait so that download struct will not be destroyed
