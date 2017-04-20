@@ -1,10 +1,12 @@
 // user process that is spawned to handle actions specified in spawnshortcuts
 auto userprocess = "/home/henry/.config/qsurf/usr.sh";
+// this script is injected to all pages
+auto scriptfile = "/home/henry/.config/qsurf/script.js";
 
 // this action will be executed on startup, when no url is provided.
 // Action is identified by it's shortcut. Assign nullptr to disable this
 // functionality
-const char* startupaction = "Ctrl+g";
+auto startupaction = "Ctrl+g";
 
 std::initializer_list<std::tuple<QWebEnginePage::WebAction, const char *>>
 webshortcuts = {

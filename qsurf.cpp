@@ -5,12 +5,15 @@
 #include <QApplication>
 #include <QAuthenticator>
 #include <QClipboard>
+#include <QFile>
 #include <QIODevice>
 #include <QProcess>
 #include <QString>
 #include <QWebEngineDownloadItem>
 #include <QWebEngineFullScreenRequest>
 #include <QWebEngineProfile>
+#include <QWebEngineScript>
+#include <QWebEngineScriptCollection>
 #include <QWebEngineSettings>
 #include <QWebEngineView>
 
@@ -163,6 +166,15 @@ WebView::WebView() {
           *authenticator = QAuthenticator();
         }
       });
+  // inject javascript
+  QFile file {QString(scriptfile)};
+  file.open(QIODevice::ReadOnly);
+
+  auto script = QWebEngineScript();
+  script.setName("userscript");
+  script.setInjectionPoint(QWebEngineScript::DocumentReady);
+  script.setSourceCode(QTextStream(&file).readAll());
+  page()->scripts().insert(script);
 }
 
 int main(int argc, char *argv[]) {
