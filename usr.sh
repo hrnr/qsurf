@@ -7,10 +7,10 @@ selbgcolor='#535d6c'
 selfgcolor='#ffffff'
 
 # files
-barhistoryf=~/.surf/barhistory.txt
-findhistoryf=~/.surf/findhistory.txt
-browserhistoryf=~/.surf/history.txt
-bookmarksf=~/.surf/bookmarks.txt
+barhistoryf=~/.config/qsurf/barhistory.txt
+findhistoryf=~/.config/qsurf/findhistory.txt
+browserhistoryf=~/.config/qsurf/history.txt
+bookmarksf=~/.config/qsurf/bookmarks.txt
 
 # how many history entries to preserve
 history_count=100
