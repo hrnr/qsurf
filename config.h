@@ -32,6 +32,9 @@ generalshortcuts = {
 {"Ctrl+Shift+n", [](auto view) { view->findNext(QWebEnginePage::FindBackward); }},
 {"Ctrl+y", [](auto view) { clipboard->setText(view->url().toString()); }},
 {"Ctrl+p", [](auto view) { view->load(clipboard->text()); }},
+{"Ctrl++", [](auto view) { view->setZoomFactor(view->zoomFactor() + 0.25); }},
+{"Ctrl+-", [](auto view) { view->setZoomFactor(view->zoomFactor() - 0.25); }},
+{"Ctrl+0", [](auto view) { view->setZoomFactor(1.0); }},
 {"Esc", [](auto view) {
   if (view->isFullScreen()) {
     view->triggerPageAction(QWebEnginePage::ExitFullScreen);
