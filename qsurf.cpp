@@ -1,4 +1,6 @@
+#include <functional>
 #include <iostream>
+#include <list>
 #include <string>
 
 #include <QAction>
@@ -167,7 +169,7 @@ WebView::WebView() {
         }
       });
   // inject javascript
-  QFile file {QString(scriptfile)};
+  QFile file{QString(scriptfile)};
   file.open(QIODevice::ReadOnly);
 
   auto script = QWebEngineScript();
