@@ -8,6 +8,10 @@ auto scriptfile = "/home/henry/.config/qsurf/script.js";
 // functionality
 auto startupaction = "Ctrl+g";
 
+// maximum http cache size to use in bytes
+const int maximum_cache_size = 1073741824 /* 1 GB */;
+
+/* shortcuts */
 std::initializer_list<std::tuple<QWebEnginePage::WebAction, const char *>>
 webshortcuts = {
 {QWebEnginePage::Reload, "Ctrl+r"},

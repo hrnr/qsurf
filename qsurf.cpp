@@ -177,6 +177,8 @@ WebView::WebView() {
   script.setInjectionPoint(QWebEngineScript::DocumentReady);
   script.setSourceCode(QTextStream(&file).readAll());
   page()->scripts().insert(script);
+  // set cache size
+  page()->profile()->setHttpCacheMaximumSize(maximum_cache_size);
 }
 
 int main(int argc, char *argv[]) {
