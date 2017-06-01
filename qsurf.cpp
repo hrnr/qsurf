@@ -82,19 +82,19 @@ WebView::WebView() {
   QObject::connect(&proc_,
                    static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(
                        &QProcess::finished),
-                   [this](int exitCode, QProcess::ExitStatus exitStatus) {
-                     if (exitStatus == QProcess::NormalExit && exitCode == 0 &&
-                         proc_finished_cb_) {
-                       std::size_t len = proc_.bytesAvailable();
-                       if (len < 2) {
-                         // qt can't handle this small reads (this would mean
-                         // just endline)
-                         return;
-                       }
-                       std::string output(len, '\0');
-                       proc_.readLine(&output[0], len);
-                       proc_finished_cb_(output);
+                   [this](int, QProcess::ExitStatus) {
+                     if (!proc_finished_cb_) {
+                       return;
                      }
+                     std::size_t len = proc_.bytesAvailable();
+                     std::string output;
+                     if (len > 1) {
+                       // qt can't handle this small reads (this would mean
+                       // just endline)
+                       output.resize(len, '\0');
+                       proc_.readLine(&output[0], len);
+                     }
+                     proc_finished_cb_(output);
                    });
 
   /* shortcuts */
@@ -145,6 +145,8 @@ WebView::WebView() {
         proc_finished_cb_ = [download](auto output) {
           if (output.size() > 1 && output[0] == 'y') {
             download->accept();
+          } else {
+            download->cancel();
           }
         };
         // wait so that download struct will not be destroyed
@@ -158,15 +160,13 @@ WebView::WebView() {
         proc_finished_cb_ = [authenticator](auto output) {
           auto output_list = QString::fromStdString(output).split(";");
           if (output_list.size() < 2) {
+            *authenticator = QAuthenticator();
             return;
           }
           authenticator->setUser(output_list[0]);
           authenticator->setPassword(output_list[1]);
         };
         proc_.waitForFinished(-1);
-        if (authenticator->user().isEmpty()) {
-          *authenticator = QAuthenticator();
-        }
       });
   // inject javascript
   QFile file{QString(scriptfile)};

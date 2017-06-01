@@ -25,7 +25,8 @@ std::initializer_list<std::tuple<const char *, const char *,
                                  std::function<void(WebView*, const std::string &)>>>
 spawnshortcuts = {
 {"navigate", "Ctrl+g",
- [](auto view, auto output) { view->load(QUrl::fromUserInput(output.c_str())); }},
+ [](auto view, auto output) { if (output.empty()) return;
+    view->load(QUrl::fromUserInput(output.c_str())); }},
 {"find", "Ctrl+f", [](auto view, auto output) { view->findText(output.c_str()); }},
 {"bookmark", "Ctrl+b", [](auto, auto) {}},
 };
